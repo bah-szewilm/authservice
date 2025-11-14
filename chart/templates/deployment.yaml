@@ -62,6 +62,12 @@ spec:
             - name: ca-bundle
               mountPath: /mnt/ca-bundle              
             {{- end }}
+            {{- range $v := .Values.chains }}
+            {{- if hasKey $v "client_secret_ref" }}
+            - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+              name: serviceaccount-info
+            {{- end }}
+            {{- end }}
       {{- if .Values.global.certificate_authority }}
       initContainers:
         - name: update-ca-bundle
@@ -104,4 +110,18 @@ spec:
         - name: ca-bundle
           emptyDir:
             sizeLimit: 5Mi
-        {{- end}}
+        {{- range $v := .Values.chains }}
+        {{- if hasKey $v "client_secret_ref" }}
+        - name: serviceaccount-info
+          projected:
+            sources:
+            - serviceAccountToken:
+                path: token
+            - downwardAPI:
+                items:
+                - path: namespace
+                  fieldRef:
+                    fieldPath: metadata.namespace
+        {{- end }}
+        {{- end }}
+        {{- end }}
